@@ -5,4 +5,4 @@ How to use:
 copy the image to convert to the directory out/
 the directory should contain the program 'analyse'
 
-$ ./analyse <filename>
+$ ./analyse <<filename>>
