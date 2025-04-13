@@ -27,6 +27,10 @@ double Q_two_diagonal(int , int , int );
 double Q_three_diagonal(int , int , int );
 double Q_four_diagonal(int , int , int );
 
+double average(int , int , int );
+double valley_average(int , int , int );
+double hill_average(int, int, int );
+
 void calibrate(int n);
 
 void print_pattern(int , double (*)(int, int, int));

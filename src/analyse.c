@@ -8,32 +8,6 @@
 #include"analyse.h"
 
 /*
-global data
-*/
-
-int arithmetic(PixelInfo *info, int *temp);
-int (*avg_fun)(PixelInfo *, int*) = &arithmetic;
-char *output_dir = "./";
-int convolution_size = 3;
-int convolution_area = 9;
-char output_extension[6] = ".png";
-unsigned int counter = 0;
-const char * const COLORS[] = { "#ffff00000000", "#888800000000", "#00000000ffff",
-                                "#000000008888", "#ffff0000ffff", "#888800008888",
-                                "#0000ffff0000", "#000088880000", "#ffffffffffff" };
-int quantum_range = 255;
-int combine_color_cutoff = 5; // must be above this percentage to draw a color in the combined image -cc<number>
-int saturation_pattern_cutoff = 10; // convolution must return a value be above this percentage to contribute to the ascii convertion -cs<number>
-int ignore_noise_cutoff = 5; // above this percentage the intensity of the convolution channel contribute to increasing the number of convolutions in a pixel, -cN<number>
-int ascii_min_intensity = 10; // pixel must be at least this intense to not be empty -ci<number>
-int ascii_entropy_ignore = 4; // if there are more than this much noise in a pixel(see ignore_noise_cutoff), set it to the noise pixel -cn<number>
-int grid_on = 0;
-int grid_length = 5;
-char grid_color[] = "#ffffffffffff";
-int show_steps = 0;
-int use_random = 0;
-int random_epsilon = 1000;
-/*
 helper functions
 */
 
@@ -113,21 +87,15 @@ int set_cutoff(char *str) {
         ascii_entropy_ignore = temp;
     }else if(*str == 'i') {
         ascii_min_intensity = temp;
+    }else if(*str == 'I') {
+        ascii_mid_intensity = temp;
+    }else if(*str == 'H') {
+        ascii_high_intensity = temp;
     }else if(*str == 'N') {
         ignore_noise_cutoff = temp;
     }else {
         return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
-}
-
-int set_noise(char *str) {
-    int temp = -1;
-    int status = sscanf(str, "%d", &temp);
-    if(status != 1 || temp < 0){
-        return EXIT_FAILURE;
-    }
-    use_random = temp;
     return EXIT_SUCCESS;
 }
 
@@ -169,7 +137,6 @@ int set_grid_on(char *str) {
 }
 
 int set_output_dir(char *str) {
-    output_dir = malloc((strlen(str) + 1) * sizeof(char));
     strcpy(output_dir, str);
     char temp[] = "/";
     strcat(output_dir, temp);
@@ -274,30 +241,45 @@ int combine(const struct image_meta *imgs, const char * const colors[], int leng
 }
 
 char to_ascii_lookup(struct ascii_pixel *pix) {
-    //
-    if(pix->total_intensity < ascii_min_intensity * quantum_range / 100) {
-        return ' ';
-    }
-    if(pix->noise > ascii_entropy_ignore) {
-        return '#';
-    }
+    int pix_intensity_val = -1;
     int max_index = -1;
-    int max_intensity = 0;
-    for(int i = 0; i < pix->len; i++) {
+    int max_intensity = -1;
+    int second_max_index = -1;
+    int second_max_intensity = 0;
+    for(int i = 0; i < pix->len - 1; i++) {
         if(pix->intensity[i] > max_intensity) {
             max_index = i;
             max_intensity = pix->intensity[i];
             //printf("%d: range(%d, %d) intensity:%d , noise:%d\n",i, pix->range_min[i], pix->range_max[i], pix->intensity[i], pix->noise);
         }
+        if(pix->intensity[i] > second_max_intensity && pix->intensity[i] < max_intensity) {
+
+        }
     }
+    if(max_intensity < ascii_min_intensity * quantum_range / 100) {
+        return ' ';
+    }else if(max_intensity < ascii_mid_intensity * quantum_range / 100) {
+        pix_intensity_val = 0;
+    }else if(max_intensity < ascii_high_intensity * quantum_range / 100) {
+        pix_intensity_val = 1;
+    }else {
+        pix_intensity_val = 2;
+    }
+    if(pix->noise > ascii_entropy_ignore) {
+        return ascii_lookup_table[pix_intensity_val];
+    }
+
+
+    int dual_wield = max_intensity - second_max_intensity < 10 * quantum_range / 100 ? 1 : 0;
+
     if(max_index == 0 || max_index == 1) {
-        return '|';
+        return ascii_lookup_table[3 + pix_intensity_val];
     }else if (max_index == 2 || max_index == 3) {
-        return '-';
-    }else if (max_index == 4 || max_index == 5) {
-        return '/';
-    }else if (max_index == 6 || max_index == 7) {
-        return '\\';
+        return ascii_lookup_table[6 + pix_intensity_val];
+    }else if (max_index == 4 || max_index == 7) {
+        return ascii_lookup_table[9 + pix_intensity_val];
+    }else if (max_index == 6 || max_index == 5) {
+        return ascii_lookup_table[12 + pix_intensity_val];
     }else {
         return '@';
     }
@@ -305,27 +287,27 @@ char to_ascii_lookup(struct ascii_pixel *pix) {
 
 // to_ascii(imgs, length, pixel_size) TODO track average positions of each intensity, ie close to the center or edges
 int to_ascii(const struct image_meta *imgs, int length, int pixel_size) {
-    printf("starting ascii conversion.\n");
+    // printf("starting ascii conversion.\n");
     int rows = imgs->height / pixel_size;
     int cols = imgs->width / pixel_size;
     int temp_i = 0;
-    struct ascii_pixel *pix = malloc(sizeof(struct ascii_pixel));
+    struct ascii_pixel *pix = &(struct ascii_pixel){};
     pix->len = length;
     pix->pixel_size = pixel_size;
-    int *range_min = malloc(length * sizeof(int));
-    int *range_max = malloc(length * sizeof(int));
-    int *intensity = malloc(length * sizeof(int));
-    int *data = malloc(length * pixel_size * pixel_size * sizeof(int));
+    int range_min[length];
+    int range_max[length];
+    int intensity[length];
+    int data[length * pixel_size * pixel_size];
     pix->range_min = range_min;
     pix->range_max = range_max;
     pix->intensity = intensity;
+    pix->avg_brightness = 0;
     pix->data = data;
     int temp_pix_data;
     for(int row = 0; row < rows; row++) {
         for(int col = 0; col < cols; col++) {
             //printf("R%d C%d :", row, col);
             pix->noise = 0;
-            pix->total_intensity = 0;
             for(int i = 0; i < length; i++){
                 pix->range_min[i] = quantum_range;
                 pix->range_max[i] = 0;
@@ -348,7 +330,6 @@ int to_ascii(const struct image_meta *imgs, int length, int pixel_size) {
                 }
                 if(pix->intensity[i] != 0) {
                     pix->intensity[i] /= pixel_size * pixel_size;
-                    pix->total_intensity += pix->intensity[i];
                     if(pix->intensity[i] > ignore_noise_cutoff * quantum_range / 100) {
                         pix->noise++;
                     }
@@ -361,29 +342,51 @@ int to_ascii(const struct image_meta *imgs, int length, int pixel_size) {
         }
         printf("\n");
     }
-    free(range_min);
-    free(range_max);
-    free(intensity);
-    free(data);
-    free(pix);
     return 0;
 }
 
+void auto_balence_func(struct image_meta *imgs, int len) {
+    int avg_intensity = 0;
+    int avg_avg_intensity = 0;
+    int pixels = 0;
+    for(int i = 0; i < len; i++) {
+        avg_intensity = 0;
+        pixels = imgs[i].height * imgs[i].width;
+        for(int j = 0; j < pixels; j++) {
+            avg_intensity += imgs[i].data[j];
+        }
+        avg_intensity /= pixels;
+        avg_avg_intensity += avg_intensity;
+        // printf("%d:%d\n", i, avg_intensity);
+    }
+    avg_avg_intensity /= len;
+    // printf("avg:%d\n", avg_avg_intensity);
+    if(avg_avg_intensity >= auto_balence) {
+        return;
+    }
+    int boost = auto_balence * 100 / avg_avg_intensity;
+    for(int i = 0; i < len; i++) {
+        pixels = imgs[i].height * imgs[i].width;
+        for(int j = 0; j < pixels; j++) {
+            imgs[i].data[j] *= boost;
+            imgs[i].data[j] /= 100;
+        }
+    }
+}
 /*
 ./analyse <filename> [-options]
  -f<1,2> averaging function, default is arithmatic
  -n<number> uses the convolution matrix of size number * number, default is 3 * 3
  -e<extension> output file type, default is .png
- -c<number> sets the cutoff when combining images in percent, default 10%
- -g<number> draws a grid of size number on the images generated, default off
- -N<number> adds noise to resolve ties, default is off
+ -c<option><number> sets the cutoffs see documentation for set_cutoff
+ -g<number> draws a grid of size number on the images generated, default off, use -g1 to enable grid drawing
  -t(patterns, image) testing mode for given value
 takes the name of an image in the current directory
 opens the image with magickopenimage and puts the averaged rgb data in an array
 loop through convolution functions and generate a grey-scale image per function
 */
 
-int main(int argsc, char **argsv) {
+int pipeline(int argsc, char **argsv) {
     sscanf(MagickQuantumRange, "%d", &quantum_range);
     // parse options
     if(argsc < 2){
@@ -410,8 +413,6 @@ int main(int argsc, char **argsv) {
             show_steps = 1;
         }else if(option == 'g'){
             status = set_grid_on(&argsv[i][2]);
-        }else if(option == 'N'){
-            status = set_noise(&argsv[i][2]);
         }else if(option == 'o'){
             status = set_output_dir(&argsv[i][2]);
         }else{
@@ -423,7 +424,7 @@ int main(int argsc, char **argsv) {
             exit(EXIT_FAILURE);
         }
     }
-    printf("Options parsed.\n");
+    // printf("Options parsed.\n");
 
     // initiate data
     struct image_meta img = { argsv[1] };
@@ -454,35 +455,40 @@ int main(int argsc, char **argsv) {
             //printf("%d,",image_data[y * img.width + x]);
         }
     }
-    printf("depth:%d\n", quantum_range);
+    // printf("depth:%d\n", quantum_range);
     // clean up
     iterator = DestroyPixelIterator(iterator);
     mw = DestroyMagickWand(mw);
     MagickWandTerminus();
-    printf("Image put in memory.\n");
+    // printf("Image put in memory.\n");
 
     // analyse with each pattern
-    struct image_meta imgs[convolution_pattern_length];
+    struct image_meta imgs[use_patterns_len];
     char tempstr[100];
     const int tempwidth = img.width - convolution_size + 1;
     const int tempheight = img.height - convolution_size + 1;
-    int new_image_data[tempwidth * tempheight * convolution_pattern_length];
-    for(int i = 0; i < convolution_pattern_length; i++){
+    int new_image_data[tempwidth * tempheight * use_patterns_len];
+    for(int i = 0; i < use_patterns_len; i++){
         sprintf(tempstr, "%simage_%d%s", output_dir, i, output_extension);
         imgs[i] = (struct image_meta){ tempstr, tempwidth, tempheight, new_image_data + tempwidth * tempheight * i };
-        apply(&img, imgs+i, convolution_size, convolution_pattern_basic[i]);
-        if(show_steps != 0){
-            if(to_image(imgs+i) == EXIT_FAILURE){ printf("Error writing: %s", imgs[i].name);}
-        }
+        apply(&img, imgs+i, convolution_size, use_patterns[i]);
         
     }
+    if(auto_balence) { auto_balence_func(imgs, use_patterns_len);}
+    if(show_steps != 0){
+        for(int i = 0; i < use_patterns_len; i++){
+            if(to_image(imgs+i) == EXIT_FAILURE){ printf("Error writing: %s", imgs[i].name);}
+        }
+    }
+
     sprintf(tempstr, "%snew_image%s", output_dir, output_extension);
     img.name = tempstr;
     if(show_steps != 0){ 
         if(to_image(&img) == EXIT_FAILURE){ printf("Error writing: %s", img.name);}
-        combine(imgs, COLORS, convolution_pattern_length, combine_color_cutoff);
+        combine(imgs, COLORS, use_patterns_len, combine_color_cutoff);
     }
-    to_ascii(imgs, convolution_pattern_length, grid_length);
-    printf("Done\n");
-    printf("counter: %d\n", counter);
+    to_ascii(imgs, use_patterns_len, grid_length);
+    // printf("Done\n");
+    // printf("counter: %d\n", counter);
+    return EXIT_SUCCESS;
 }

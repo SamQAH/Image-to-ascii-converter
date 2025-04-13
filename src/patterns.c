@@ -1,5 +1,6 @@
 #include "patterns.h"
 #include<stdio.h>
+#include<math.h>
 
 // calibration data
 double vert_gain[] = {1,1,1,0.5,0.187,0.333,0.164,0.273,0.149,0.24};
@@ -109,6 +110,37 @@ double Q_three_diagonal(int x, int y, int size) {
 double Q_four_diagonal(int x, int y, int size) {
     return Q_one_diagonal(size - x - 1, size - y - 1, size);
 }
+
+double average(int x, int y, int size) {
+    return 1.0 / (size * size);
+}
+double hill_average(int x, int y, int size) {
+    if(x == 0 || y == 0 || x == size - 1 || y == size - 1) {
+        return -0.5 / (4 * (size - 1));
+    }else {
+        return 0.5 / ((size - 2) * (size - 2));
+    }
+    // size /= 2;
+    // x = x - size;
+    // y = y - size;
+    // x = x < 0 ? -x : x;
+    // y = y < 0 ? -y : y;
+    // return (double)(2.4 - x - y) / (size * size * 5);
+}
+double valley_average(int x, int y, int size) {
+    if(x == 0 || y == 0 || x == size - 1 || y == size - 1) {
+        return 0.5 / (4 * (size - 1));
+    }else {
+        return -0.5 / ((size - 2) * (size - 2));
+    }
+    // size /= 2;
+    // x = x - size;
+    // y = y - size;
+    // x = x < 0 ? -x : x;
+    // y = y < 0 ? -y : y;
+    // return (double)(x + y - 2.4) / (size * size * 5);
+}
+
 
 // generates the calibration data for all patterns up to size n
 void calibrate(int n) {
