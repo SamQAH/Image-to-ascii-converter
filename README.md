@@ -6,3 +6,9 @@ copy the image to convert to the directory out/image.png
 the directory should contain the program 'analyse'
 
 $ ./analyse image.png
+
+planned changes:
+help text
+Makefile
+refactoring
+general improvements
