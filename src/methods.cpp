@@ -1,4 +1,5 @@
 #include"methods.h"
+#include"colour_lab.h"
 #include<cstdlib>
 #include<algorithm>
 #include<iostream>
@@ -33,6 +34,12 @@ public:
 		else {
 			return Color("white");
 		}
+	}
+	static Color reduce_accuracy_shader(Color& col) {
+		float r = (float)floor(col.quantumRed() / QuantumRange * uniform_f) * QuantumRange / uniform_f;
+		float g = (float)floor(col.quantumGreen() / QuantumRange * uniform_f) * QuantumRange / uniform_f;
+		float b = (float)floor(col.quantumBlue() / QuantumRange * uniform_f) * QuantumRange / uniform_f;
+		return Color(r, g, b);
 	}
 };
 float Shader::uniform_f = 0;
@@ -81,8 +88,15 @@ void add_rgb_noise(Image& img, float range) {
 	apply_fragment_shader(img, Shader::rgb_true_noise_shader);
 }
 
-void color_smoothen(Image& img, float distance) {
-
+void color_smoothen(Image& img, float radius, float margin) {
+	ColorSmoother csm = ColorSmoother(radius, margin);
+	csm.add_image(img);
+	for (int i = 0; i < img.columns(); i++) {
+		for (int j = 0; j < img.rows(); j++) {
+			Color tempC = img.pixelColor(i, j);
+			img.pixelColor(i, j, csm.find_nearest(tempC));
+		}
+	}
 }
 
 void to_black_and_white(Image& img, float cutoff) {
@@ -198,4 +212,9 @@ void to_black_and_white_dynamic(Image& img, float cutoff, float g_width) {
 		}
 	}
 	debug_img.write("debug.png");
+}
+
+void reduce_entropy(Image& img, int size) {
+	Shader::uniform_f = size;
+	apply_fragment_shader(img, Shader::reduce_accuracy_shader);
 }

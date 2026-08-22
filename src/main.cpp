@@ -32,11 +32,23 @@ int main(int argc, char** argv) {
 
 	Image img{ {640,640},"gray" };
 	if (argc != 1) {
-		img = Image(image_name);
+		try {
+			img = Image(image_name);
+		}
+		catch (exception e) {
+			try {
+				string in_name = "in/" + image_name;
+				img = Image(in_name);
+			}
+			catch (exception e) {
+				cout << "couldn't open:" << image_name << endl;
+				return 1;
+			}
+		}
 		cout << img.columns() << "," << img.rows() << endl;
 	}
 	if (!(img.isValid())) {
-		cout << "couldn't open:" << image_name << endl;
+		cout << "is not valid:" << image_name << endl;
 		return 1;
 	}
 	cout << "Starting..." << endl;
@@ -66,8 +78,9 @@ int main(int argc, char** argv) {
 		}
 		else if (temp_string == "save") {
 			string temp_name = out_image_name + "_" + to_string(count++) + '.' + extension;
-			img.write(temp_name);
-			string cmd = '"' + temp_name + '"';
+			string out_name = "out/" + temp_name;
+			img.write(out_name);
+			string cmd = "start " + out_name;
 			system(cmd.c_str());
 			cout << "Saved " << temp_name << endl;
 		}
@@ -93,7 +106,7 @@ int main(int argc, char** argv) {
 			iss >> temp_float;
 			images_list.emplace_back( img );
 			to_black_and_white(img, temp_float);
-			cout << "Applied black and white." << endl;
+			cout << "Applied black and white." << temp_float << endl;
 		}
 		else if (temp_string == "d2tone") {
 			float temp_float = 0.95;
@@ -101,7 +114,22 @@ int main(int argc, char** argv) {
 			iss >> temp_float >> temp_float2;
 			images_list.emplace_back(img);
 			to_black_and_white_dynamic(img, temp_float, temp_float2);
-			cout << "Applied dynamic black and white." << endl;
+			cout << "Applied dynamic black and white. " << temp_float << " , " << temp_float2 << endl;
+		}
+		else if (temp_string == "smoothen") {
+			float temp_float = 0.125;
+			float temp_float2 = 0.135;
+			iss >> temp_float >> temp_float2;
+			images_list.emplace_back(img);
+			try {
+				color_smoothen(img, temp_float, temp_float2);
+
+			}
+			catch (exception e) {
+				cerr << e.what() << endl;
+				return 1;	
+			}
+			cout << "Applied colour smoothen. " << temp_float << " , " << temp_float2 << endl;
 		}
 		else if (temp_string == "undo") {
 			if (images_list.empty()) {
@@ -112,6 +140,13 @@ int main(int argc, char** argv) {
 				images_list.pop_back();
 				cout << "Undid last operation." << endl;
 			}
+		}
+		else if (temp_string == "bit") {
+			float temp_float = 8;
+			iss >> temp_float;
+			images_list.emplace_back(img);
+			reduce_entropy(img, temp_float);
+			cout << "Applied reduce bits. " << temp_float << endl;
 		}
 		else {
 			cout << "option not found, placeholder help text" << endl;
