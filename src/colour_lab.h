@@ -9,12 +9,11 @@
 
 using namespace std;
 
-constexpr int colorRange = 257;
 constexpr float quantumScaleFactor = Color::quantumScaleFactor;
 
 ostream& operator<<(ostream& out, Color& color);
 
-class ColorSpaceRGB {//R1 vs R3, loose too much information ie serpinsky pyramid shadow is a square
+class ColorSpaceRGB {
 	vector<vector<vector<int>>> rgbSpace;
 	int sum;
 public:

@@ -8,22 +8,23 @@
 using namespace std;
 
 constexpr float quantumRange = 65535.0f; // Magick::quantumRange needs Magick namespace
+constexpr float colorRange = 256.0f;
 
 class Color {
 public:
-	static constexpr float quantumScaleFactor = 256.0f / quantumRange; 
-	size_t qRed, qGreen, qBlue;
-	size_t Red, Green, Blue;
+	static constexpr float quantumScaleFactor = colorRange / quantumRange;
+	int qRed, qGreen, qBlue;
+	int Red, Green, Blue;
 	Color(Magick::Color& color);
 	Color(const string& str);
-	Color(size_t r=0, size_t g=0, size_t b=0);
+	Color(int r=0, int g=0, int b=0); // rgb from 0 to 256
 	Magick::Color quantumColor() const;
-	size_t quantumRed() const;
-	size_t quantumGreen() const;
-	size_t quantumBlue() const;
-	size_t red() const;
-	size_t green() const;
-	size_t blue() const;
+	int quantumRed() const;
+	int quantumGreen() const;
+	int quantumBlue() const;
+	int red() const;
+	int green() const;
+	int blue() const;
 };
 
 class Image {

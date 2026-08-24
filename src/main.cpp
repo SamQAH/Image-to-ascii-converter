@@ -56,9 +56,10 @@ int main(int argc, char** argv) {
 	unsigned int image_width = magick_img.columns();
 	magick_img.type(Magick::ImageType::TrueColorType);
 	magick_img.modifyImage();
-	
+	int num_empty = 0;
 	bool running = true;
 	int count = 1;
+	string prev_op = "none";
 	Image img(magick_img);
 	list<Image> images_list;
 	while (running) {
@@ -78,11 +79,13 @@ int main(int argc, char** argv) {
 			cout << "Quit." << endl;
 		}
 		else if (temp_string == "save") {
-			string temp_name = out_image_name + "_" + to_string(count++) + '.' + extension;
+			string temp_name = out_image_name + "_" + to_string(count++) + "_" + prev_op + '.' + extension;
 			string out_name = "out/" + temp_name;
 			img.write(out_name);
+#ifdef OPENFILE
 			string cmd = "start " + out_name;
 			system(cmd.c_str());
+#endif
 			cout << "Saved " << temp_name << endl;
 		}
 		else if (temp_string == "noise") {
@@ -91,6 +94,7 @@ int main(int argc, char** argv) {
 			images_list.emplace_back( img );
 			add_monotone_true_noise(img, temp_float);
 			cout << "Applied uniform noise." << temp_float << endl;
+			prev_op = "noise" + to_string(temp_float);
 		}
 		else if (temp_string == "bnoise") {
 			unsigned int tempx = 1;
@@ -101,6 +105,7 @@ int main(int argc, char** argv) {
 			images_list.emplace_back(img);
 			add_monotone_block_noise(img, tempx, tempy, temp_float, temp_size);
 			cout << "Applied block noise." << temp_float << endl;
+			prev_op = "block-noise" + to_string(temp_float) + "-" + to_string(temp_size);
 		}
 		else if (temp_string == "2tone") {
 			float temp_float = 0.7;
@@ -108,6 +113,7 @@ int main(int argc, char** argv) {
 			images_list.emplace_back( img );
 			to_black_and_white(img, temp_float);
 			cout << "Applied black and white." << temp_float << endl;
+			prev_op = "2tone" + to_string(temp_float);
 		}
 		else if (temp_string == "d2tone") {
 			float temp_float = 0.95;
@@ -116,21 +122,24 @@ int main(int argc, char** argv) {
 			images_list.emplace_back(img);
 			to_black_and_white_dynamic(img, temp_float, temp_float2);
 			cout << "Applied dynamic black and white. " << temp_float << " , " << temp_float2 << endl;
+			prev_op = "dynamic2tone" + to_string(temp_float) + "-" + to_string(temp_float2);
 		}
 		else if (temp_string == "smoothen") {
 			float temp_float = 0.125;
 			float temp_float2 = 0.135;
 			iss >> temp_float >> temp_float2;
 			images_list.emplace_back(img);
-			try {
-				color_smoothen(img, temp_float, temp_float2);
-
-			}
-			catch (exception e) {
-				cerr << e.what() << endl;
-				return 1;	
-			}
+			color_smoothen(img, temp_float, temp_float2);
 			cout << "Applied colour smoothen. " << temp_float << " , " << temp_float2 << endl;
+			prev_op = "color-smoothen" + to_string(temp_float) + "-" + to_string(temp_float2);
+		}
+		else if (temp_string == "bit") {
+			float temp_float = 8;
+			iss >> temp_float;
+			images_list.emplace_back(img);
+			reduce_entropy(img, temp_float);
+			cout << "Applied reduce bits. " << temp_float << endl;
+			prev_op = "bit-shift" + to_string(temp_float);
 		}
 		else if (temp_string == "undo") {
 			if (images_list.empty()) {
@@ -141,17 +150,15 @@ int main(int argc, char** argv) {
 				images_list.pop_back();
 				cout << "Undid last operation." << endl;
 			}
-		}
-		else if (temp_string == "bit") {
-			float temp_float = 8;
-			iss >> temp_float;
-			images_list.emplace_back(img);
-			reduce_entropy(img, temp_float);
-			cout << "Applied reduce bits. " << temp_float << endl;
+			prev_op = "undo";
 		}
 		else {
-			cout << "option not found, placeholder help text" << endl;
-
+			cout << temp_string << " option not found, placeholder help text: " << endl;
+			if (num_empty > 5) {
+				running = false;
+				cout << "Quit." << endl;
+			}
+			num_empty++;
 		}
 	}
 

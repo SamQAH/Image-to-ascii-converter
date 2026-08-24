@@ -2,7 +2,7 @@
 CC = clang -fcolor-diagnostics -fansi-escape-codes
 #CC = g++ -fpermissive
 OP = -g -O0 -MMD
-FLAGS = 
+FLAGS = -DOPENFILE
 OT = -o analyse.exe
 INC = -I"C:/Program Files/ImageMagick-7.1.2-Q16-HDRI/include"
 LK = -L"C:\Program Files\ImageMagick-7.1.2-Q16-HDRI\lib" -lCORE_RL_Magick++_
@@ -21,7 +21,7 @@ clean:
 	rm -f *.o *.d main.exe
 
 test:
-	make
-	main.exe image.png << test.in
+	make FLAGS="-DNONE"
+	analyse.exe image.png < test.in > debug.out
 
 .PHONY: clean test

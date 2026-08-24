@@ -24,17 +24,17 @@ class Shader {
 public:
 	static float uniform_f;
 	static Color monotone_true_noise_shader(Color& col) {
-		float rand = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
-		return Color(col.quantumRed() + rand, col.quantumGreen() + rand, col.quantumBlue() + rand);
+		float rand = colorRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		return Color((float)col.red() + rand, (float)col.green() + rand, (float)col.blue() + rand);
 	}
 	static Color rgb_true_noise_shader(Color& col) {
-		float randr = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
-		float randg = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
-		float randb = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
-		return Color(col.quantumRed() + randr, col.quantumGreen() + randg, col.quantumBlue() + randb);
+		float randr = colorRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float randg = colorRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float randb = colorRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		return Color((float)col.red() + randr, (float)col.green() + randg, (float)col.blue() + randb);
 	}
 	static Color black_and_white_shader(Color& col) {
-		if (max({ col.quantumRed(), col.quantumGreen(), col.quantumBlue() }) < uniform_f) {
+		if (max({ col.red(), col.green(), col.blue() }) < uniform_f) {
 			return Color("black");
 		}
 		else {
@@ -42,9 +42,9 @@ public:
 		}
 	}
 	static Color reduce_accuracy_shader(Color& col) {
-		float r = (float)floor(col.quantumRed() / quantumRange * uniform_f) * quantumRange / uniform_f;
-		float g = (float)floor(col.quantumGreen() / quantumRange * uniform_f) * quantumRange / uniform_f;
-		float b = (float)floor(col.quantumBlue() / quantumRange * uniform_f) * quantumRange / uniform_f;
+		float r = (float)floor(col.red() / colorRange * uniform_f) * colorRange / uniform_f;
+		float g = (float)floor(col.green() / colorRange * uniform_f) * colorRange / uniform_f;
+		float b = (float)floor(col.blue() / colorRange * uniform_f) * colorRange / uniform_f;
 		return Color(r, g, b);
 	}
 };
@@ -56,7 +56,7 @@ void add_monotone_block_noise(Image& img, unsigned int xAvg, unsigned int yAvg, 
 	rands_grid.resize(img.columns(), vector<float>((size_t) img.rows()) );
 	int total = repeat * img.rows() * img.columns() / (xAvg * yAvg);
 	for (int n = 0; n < total; n++) {
-		float rand = quantumRange * (range * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float rand = colorRange * (range * ((float)std::rand() / RAND_MAX * 2 - 1));
 		int tempx = std::rand() % img.columns();
 		int tempy = std::rand() % img.rows();
 		int tempw = std::rand() % (4 * xAvg) - (2 * xAvg);
@@ -78,7 +78,7 @@ void add_monotone_block_noise(Image& img, unsigned int xAvg, unsigned int yAvg, 
 				rand = 1;
 			}
 			Color tempC = img.pixelColor(i, j);
-			Color newC = Color(tempC.quantumRed() + rand, tempC.quantumGreen() + rand, tempC.quantumBlue() + rand);
+			Color newC = Color(tempC.red() + rand, tempC.green() + rand, tempC.blue() + rand);
 			img.pixelColor(i, j, newC);
 
 		}
@@ -112,7 +112,7 @@ void color_smoothen(Image& img, float radius, float margin) {
 }
 
 void to_black_and_white(Image& img, float cutoff) {
-	Shader::uniform_f = cutoff * quantumRange;
+	Shader::uniform_f = cutoff * colorRange;
 	apply_fragment_shader(img, Shader::black_and_white_shader);
 }
 
@@ -136,7 +136,7 @@ void to_black_and_white_dynamic(Image& img, float cutoff, float g_width) {
 	for (int i = 0; i < img_cols; i++) {
 		for (int j = 0; j < img_rows; j++) {
 			Color tempC = img.pixelColor(i, j);
-			data_grid[i][j] = max({ tempC.quantumRed(), tempC.quantumGreen(), tempC.quantumBlue() });
+			data_grid[i][j] = max({ tempC.red(), tempC.green(), tempC.blue() });
 		}
 	}
 	cout << "loaded image to memory" << endl;

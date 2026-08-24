@@ -2,7 +2,7 @@
 
 //constconstexpr float Color::quantumScaleFactor = 256.0f / 65535.0f; // Magick::quantumRange needs Magick namespace
 
-Color::Color(Magick::Color& color): qRed{ (size_t)color.quantumRed()}, qGreen{ (size_t)color.quantumGreen() }, qBlue{ (size_t)color.quantumBlue() }, Red{(size_t)(qRed * quantumScaleFactor)}, Green{(size_t)(qGreen * quantumScaleFactor)}, Blue{(size_t)(qBlue * quantumScaleFactor)}
+Color::Color(Magick::Color& color): qRed{ (int)color.quantumRed()}, qGreen{ (int)color.quantumGreen() }, qBlue{ (int)color.quantumBlue() }, Red{(int)(qRed * quantumScaleFactor)}, Green{(int)(qGreen * quantumScaleFactor)}, Blue{(int)(qBlue * quantumScaleFactor)}
 {
 }
 
@@ -17,8 +17,11 @@ Color::Color(const string& str)
 	Blue = qBlue * quantumScaleFactor;
 }
 
-Color::Color(size_t r, size_t g, size_t b) :qRed{ r }, qGreen{ g }, qBlue{ b }, Red{ (size_t)(r * quantumScaleFactor) }, Green{ (size_t)(g * quantumScaleFactor) }, Blue{ (size_t)(b * quantumScaleFactor) }
+Color::Color(int r, int g, int b) :Red{ r > 256 ? 256 : r < 0 ? 0 : r }, Green{ g > 256 ? 256 : g < 0 ? 0 : g }, Blue{ b > 256 ? 256 : b < 0 ? 0 : b }, qRed{ 0 }, qGreen{ 0 }, qBlue{ 0 }
 {
+	qRed = Red / quantumScaleFactor;
+	qGreen = Green / quantumScaleFactor;
+	qBlue = Blue / quantumScaleFactor;
 }
 
 Magick::Color Color::quantumColor() const
@@ -26,32 +29,32 @@ Magick::Color Color::quantumColor() const
 	return Magick::Color(qRed, qGreen, qBlue);
 }
 
-size_t Color::quantumRed() const
+int Color::quantumRed() const
 {
 	return qRed;
 }
 
-size_t Color::quantumGreen() const
+int Color::quantumGreen() const
 {
 	return qGreen;
 }
 
-size_t Color::quantumBlue() const
+int Color::quantumBlue() const
 {
 	return qBlue;
 }
 
-size_t Color::red() const
+int Color::red() const
 {
 	return Red;
 }
 
-size_t Color::green() const
+int Color::green() const
 {
 	return Green;
 }
 
-size_t Color::blue() const
+int Color::blue() const
 {
 	return Blue;
 }
