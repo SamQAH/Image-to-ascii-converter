@@ -5,10 +5,10 @@
 #include<stdlib.h>
 #include<list>
 #include<Magick++.h>
+#include"magick_wrapper.h"
 #include"methods.h"
 
 using namespace std;
-using namespace Magick;
 
 int main(int argc, char** argv) {
 	string image_name;
@@ -27,38 +27,39 @@ int main(int argc, char** argv) {
 	//out_image_name += "(out)." + buffer;
 
 	string path_to_ImageMagick_DLLs = "C:\\Program Files\\ImageMagick-7.1.2-Q16-HDRI";
-	InitializeMagick(path_to_ImageMagick_DLLs.c_str());
-	MagickPlusPlusGenesis genesis(*argv);
+	Magick::InitializeMagick(path_to_ImageMagick_DLLs.c_str());
+	Magick::MagickPlusPlusGenesis genesis(*argv);
 
-	Image img{ {640,640},"gray" };
+	Magick::Image magick_img{ {640,640},"gray" };
 	if (argc != 1) {
 		try {
-			img = Image(image_name);
+			magick_img = Magick::Image(image_name);
 		}
 		catch (exception e) {
 			try {
 				string in_name = "in/" + image_name;
-				img = Image(in_name);
+				magick_img = Magick::Image(in_name);
 			}
 			catch (exception e) {
 				cout << "couldn't open:" << image_name << endl;
 				return 1;
 			}
 		}
-		cout << img.columns() << "," << img.rows() << endl;
+		cout << magick_img.columns() << "," << magick_img.rows() << endl;
 	}
-	if (!(img.isValid())) {
+	if (!(magick_img.isValid())) {
 		cout << "is not valid:" << image_name << endl;
 		return 1;
 	}
 	cout << "Starting..." << endl;
-	unsigned int image_height = img.rows();
-	unsigned int image_width = img.columns();
-	img.type(ImageType::TrueColorType);
-	img.modifyImage();
-
+	unsigned int image_height = magick_img.rows();
+	unsigned int image_width = magick_img.columns();
+	magick_img.type(Magick::ImageType::TrueColorType);
+	magick_img.modifyImage();
+	
 	bool running = true;
 	int count = 1;
+	Image img(magick_img);
 	list<Image> images_list;
 	while (running) {
 		string buffer;

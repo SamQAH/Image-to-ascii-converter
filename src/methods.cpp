@@ -6,10 +6,16 @@
 #include<vector>
 
 void apply_fragment_shader(Image& img, Color(*shader)(Color&)) {
+	int total = img.columns() * img.rows();
+	int count = 0;
 	for (int i = 0; i < img.columns(); i++) {
 		for (int j = 0; j < img.rows(); j++) {
 			Color tempC = img.pixelColor(i, j);
 			img.pixelColor(i, j, shader(tempC));
+			if (count++ % 100000 == 0) {
+				cout << count << "/" << total << endl;
+				cout << "\x1B[1A\x1B[0J";
+			}
 		}
 	}
 }
@@ -18,13 +24,13 @@ class Shader {
 public:
 	static float uniform_f;
 	static Color monotone_true_noise_shader(Color& col) {
-		float rand = QuantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float rand = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
 		return Color(col.quantumRed() + rand, col.quantumGreen() + rand, col.quantumBlue() + rand);
 	}
 	static Color rgb_true_noise_shader(Color& col) {
-		float randr = QuantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
-		float randg = QuantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
-		float randb = QuantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float randr = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float randg = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float randb = quantumRange * (uniform_f * ((float)std::rand() / RAND_MAX * 2 - 1));
 		return Color(col.quantumRed() + randr, col.quantumGreen() + randg, col.quantumBlue() + randb);
 	}
 	static Color black_and_white_shader(Color& col) {
@@ -36,9 +42,9 @@ public:
 		}
 	}
 	static Color reduce_accuracy_shader(Color& col) {
-		float r = (float)floor(col.quantumRed() / QuantumRange * uniform_f) * QuantumRange / uniform_f;
-		float g = (float)floor(col.quantumGreen() / QuantumRange * uniform_f) * QuantumRange / uniform_f;
-		float b = (float)floor(col.quantumBlue() / QuantumRange * uniform_f) * QuantumRange / uniform_f;
+		float r = (float)floor(col.quantumRed() / quantumRange * uniform_f) * quantumRange / uniform_f;
+		float g = (float)floor(col.quantumGreen() / quantumRange * uniform_f) * quantumRange / uniform_f;
+		float b = (float)floor(col.quantumBlue() / quantumRange * uniform_f) * quantumRange / uniform_f;
 		return Color(r, g, b);
 	}
 };
@@ -50,7 +56,7 @@ void add_monotone_block_noise(Image& img, unsigned int xAvg, unsigned int yAvg, 
 	rands_grid.resize(img.columns(), vector<float>((size_t) img.rows()) );
 	int total = repeat * img.rows() * img.columns() / (xAvg * yAvg);
 	for (int n = 0; n < total; n++) {
-		float rand = QuantumRange * (range * ((float)std::rand() / RAND_MAX * 2 - 1));
+		float rand = quantumRange * (range * ((float)std::rand() / RAND_MAX * 2 - 1));
 		int tempx = std::rand() % img.columns();
 		int tempy = std::rand() % img.rows();
 		int tempw = std::rand() % (4 * xAvg) - (2 * xAvg);
@@ -91,23 +97,35 @@ void add_rgb_noise(Image& img, float range) {
 void color_smoothen(Image& img, float radius, float margin) {
 	ColorSmoother csm = ColorSmoother(radius, margin);
 	csm.add_image(img);
+	int total = img.columns() * img.rows();
+	int count = 0;
 	for (int i = 0; i < img.columns(); i++) {
 		for (int j = 0; j < img.rows(); j++) {
 			Color tempC = img.pixelColor(i, j);
 			img.pixelColor(i, j, csm.find_nearest(tempC));
+			if (count++ % 10000 == 0) {
+				cout << count << "/" << total << endl;
+				cout << "\x1B[1A\x1B[0J";
+			}
 		}
 	}
 }
 
 void to_black_and_white(Image& img, float cutoff) {
-	Shader::uniform_f = cutoff * QuantumRange;
+	Shader::uniform_f = cutoff * quantumRange;
 	apply_fragment_shader(img, Shader::black_and_white_shader);
 }
 
 void to_black_and_white_noise(Image& img) {
 
 }
-
+/*
+* to_black_and_white_dynamic(img, cutoff, g_width)
+*	converts the img to black and white where generally cutoff / 2 percent black, with details around g_width percent
+* smartly converts the image to black and white, 
+* Steps:
+* 
+*/
 void to_black_and_white_dynamic(Image& img, float cutoff, float g_width) {
 	int radius = g_width * min(img.columns(), img.rows());
 	const int img_cols = img.columns();
@@ -140,8 +158,8 @@ void to_black_and_white_dynamic(Image& img, float cutoff, float g_width) {
 	for (int i = 0; i < img_cols; i++) {
 		for (int j = 0; j < img_rows; j++) {
 			if (count++ % 100000 == 0) {
+				cout << count << "/" << total << endl;
 				cout << "\x1B[1A\x1B[0J";
-				cout << count << "/" << total << "   " << i << "," << j << endl;
 			}
 			if (i == 0) {
 				if (j == 0) {

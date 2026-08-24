@@ -1,17 +1,16 @@
 #ifndef COLOUR_LAB_H
 #define COLOUR_LAB_H
 
-#include<Magick++.h>
+#include"magick_wrapper.h"
 #include<vector>
 #include<list>
 #include<memory>
 #include<iostream>
 
 using namespace std;
-using namespace Magick;
 
 constexpr int colorRange = 257;
-constexpr float quantumScaleFactor = (float)(colorRange - 1) / QuantumRange;
+constexpr float quantumScaleFactor = Color::quantumScaleFactor;
 
 ostream& operator<<(ostream& out, Color& color);
 
@@ -30,6 +29,22 @@ public:
 	Color get();
 	string to_string();
 	static int distance_inf(const Color& a, const Color& b);
+	class Iterator {
+	private:
+		vector<vector<vector<int>>>& rgbSpace;
+		size_t rstart, rend, gstart, gend, bstart, bend;
+	public:
+		size_t currR, currG, currB;
+		Iterator(ColorSpaceRGB& space, bool end = false);
+		Iterator(ColorSpaceRGB& space, Color& color, int radius, bool end = false);
+		int& operator*();
+		Iterator& operator++();
+		bool operator!=(const Iterator& other);
+	};
+	Iterator begin();
+	Iterator end();
+	Iterator begin(Color& color, int radius);
+	Iterator end(Color& color, int radius);
 };
 
 class ColorSmoother {
@@ -37,7 +52,7 @@ class ColorSmoother {
 	int margin;
 	ColorSpaceRGB colSpace;
 	vector<Color> avgColors;
-	vector<vector<vector<char>>> colorMaper;
+	vector<vector<vector<unsigned short>>> colorMaper;
 	bool hasSynced;
 	int tolerance;
 	int maxCycle;
